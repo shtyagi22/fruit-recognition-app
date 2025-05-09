@@ -4,6 +4,13 @@ from torchvision import transforms, models
 from PIL import Image
 import numpy as np
 
+import os
+
+# For HF Spaces: avoid errors if run in limited environments
+if not os.path.exists("model.pth") or not os.path.exists("classes.txt"):
+    raise FileNotFoundError("Please upload model.pth and classes.txt to your Space.")
+
+
 # ✅ Preprocessing: match validation pipeline
 transform = transforms.Compose([
     transforms.Resize((100, 100)),
