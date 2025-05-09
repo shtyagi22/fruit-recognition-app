@@ -1,36 +1,49 @@
-# app.py
 import gradio as gr
 import torch
 from torchvision import transforms, models
 from PIL import Image
 import numpy as np
 
-# Load model
-model = models.resnet18(pretrained=False)
-model.fc = torch.nn.Linear(model.fc.in_features, 131)  # Placeholder
-model.load_state_dict(torch.load("model.pth", map_location="cpu"))
-model.eval()
-
-# Load class labels
-with open("classes.txt", "r") as f:
-    classes = f.read().splitlines()
-
-# Image preprocessing
+# ✅ Preprocessing: match validation pipeline
 transform = transforms.Compose([
     transforms.Resize((100, 100)),
     transforms.ToTensor(),
+    transforms.Normalize(mean=[0.5]*3, std=[0.5]*3)
 ])
 
+# ✅ Load class labels
+with open("classes.txt", "r") as f:
+    classes = f.read().splitlines()
+print(f"✅ Loaded {len(classes)} class labels.")
 
+# ✅ Load model
+model = models.resnet18(pretrained=False)
+model.fc = torch.nn.Linear(model.fc.in_features, len(classes))
+model.load_state_dict(torch.load("model.pth", map_location=torch.device("cpu")))
+model.eval()
+print("✅ Model loaded and ready.")
+
+# ✅ Inference function
 def classify_image(img):
+    print("🖼️ Received image for classification.")
     if isinstance(img, np.ndarray):
-        img = Image.fromarray(img)  # Convert NumPy array to PIL Image
+        img = Image.fromarray(img)
     img = transform(img).unsqueeze(0)
     with torch.no_grad():
         preds = model(img)
-        predicted = torch.argmax(preds, 1).item()
-    return classes[predicted]
+        predicted_idx = torch.argmax(preds, 1).item()
+    prediction = classes[predicted_idx]
+    print(f"🎯 Predicted: {prediction}")
+    return prediction
 
+# ✅ Gradio interface
+interface = gr.Interface(
+    fn=classify_image,
+    inputs="image",
+    outputs="text",
+    title="🍎 Fruit Classifier",
+    description="Upload a fruit image and let the model tell you what it is!"
+)
 
-interface = gr.Interface(fn=classify_image, inputs="image", outputs="text", title="Fruit Classifier")
-interface.launch(share=True)
+print("🚀 Launching web app...")
+interface.launch()
